@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Search, Download, Eye, Layers, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Search, Download, Eye, Layers, AlertCircle, CheckCircle, Clock, FileDown } from 'lucide-react';
 import type { BatchRecord } from '@/lib/types';
 
 interface BatchWithTemplate extends BatchRecord {
@@ -153,14 +153,25 @@ export default function BatchesListClient({
                           <span>View</span>
                         </Link>
                         {b.status === 'completed' && (
-                          <a
-                            href={`/api/batch/${b.id}/download`}
-                            className="p-1.5 hover:bg-primary-soft text-text-secondary hover:text-primary rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold"
-                            title="Download ZIP"
-                          >
-                            <Download className="w-4 h-4" />
-                            <span>Download</span>
-                          </a>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={`/api/batch/${b.id}/pdf`}
+                              target="_blank"
+                              className="p-1.5 hover:bg-primary-soft text-text-secondary hover:text-primary rounded-md transition-all flex items-center gap-1 text-xs font-semibold"
+                              title="Download Merged PDF (Recommended - 1.8MB)"
+                            >
+                              <FileDown className="w-3.5 h-3.5" />
+                              <span>PDF</span>
+                            </a>
+                            <a
+                              href={`/api/batch/${b.id}/download`}
+                              className="p-1.5 hover:bg-muted text-text-secondary hover:text-text rounded-md transition-all flex items-center gap-1 text-xs font-semibold"
+                              title="Download ZIP (Slow - 180MB)"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>ZIP</span>
+                            </a>
+                          </div>
                         )}
                       </div>
                     </td>

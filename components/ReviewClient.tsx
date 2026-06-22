@@ -138,11 +138,19 @@ export default function ReviewClient({
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-4 shrink-0">
         <a
-          href={`/api/batch/${batchId}/download`}
+          href={`/api/batch/${batchId}/pdf`}
+          target="_blank"
           className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 bg-primary hover:bg-primary-hover font-semibold text-sm rounded-btn text-white transition-all shadow-sm"
         >
-          <Download className="w-4 h-4" />
-          <span>Download All (ZIP)</span>
+          <FileDown className="w-4 h-4" />
+          <span>Download Merged PDF (Fast, 1.8MB)</span>
+        </a>
+        <a
+          href={`/api/batch/${batchId}/download`}
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 border border-border-strong hover:bg-muted font-semibold text-sm rounded-btn text-text transition-all"
+        >
+          <Download className="w-4 h-4 text-text-secondary" />
+          <span>Download ZIP (Slow, 180MB)</span>
         </a>
         <button
           onClick={handleDownloadReport}
