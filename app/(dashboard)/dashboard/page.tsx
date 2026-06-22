@@ -13,20 +13,21 @@ export default async function DashboardPage() {
   const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   const supabase = await createClient();
+  
+  // Fetch Templates and Batches in parallel
+  const [templatesRes, batchesRes] = await Promise.all([
+    supabase
+      .from('templates')
+      .select('*, template_fields(id)')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('batches')
+      .select('*')
+      .order('created_at', { ascending: false })
+  ]);
 
-  // Fetch Templates
-  const { data: templatesRaw } = await supabase
-    .from('templates')
-    .select('*, template_fields(id)')
-    .order('created_at', { ascending: false });
-  const templates = (templatesRaw ?? []) as (TemplateRecord & { template_fields: { id: string }[] })[];
-
-  // Fetch Batches
-  const { data: batchesRaw } = await supabase
-    .from('batches')
-    .select('*')
-    .order('created_at', { ascending: false });
-  const batches = (batchesRaw ?? []) as BatchRecord[];
+  const templates = (templatesRes.data ?? []) as (TemplateRecord & { template_fields: { id: string }[] })[];
+  const batches = (batchesRes.data ?? []) as BatchRecord[];
 
   // Calculations
   const totalTemplates = templates.length;

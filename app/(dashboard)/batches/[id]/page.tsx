@@ -70,21 +70,27 @@ export default async function BatchPage({ params }: { params: Promise<{ id: stri
   );
 }
 
+import { signedUrls } from '@/lib/storage';
+
 async function CompletedView({ batchId, batch }: { batchId: string; batch: BatchRecord }) {
   const supabase = await createClient();
 
-  const { data: flaggedData } = await supabase
-    .from('flagged_pdfs')
-    .select('*')
-    .eq('batch_id', batchId)
-    .order('row_index');
-  const flaggedRows = (flaggedData ?? []) as FlaggedPdfRow[];
+  // Fetch flagged PDFs and template fields in parallel
+  const [flaggedRes, templateRes] = await Promise.all([
+    supabase
+      .from('flagged_pdfs')
+      .select('*')
+      .eq('batch_id', batchId)
+      .order('row_index'),
+    supabase
+      .from('templates')
+      .select('template_fields(field_index, label)')
+      .eq('id', batch.template_id)
+      .single()
+  ]);
 
-  const { data: template } = await supabase
-    .from('templates')
-    .select('template_fields(field_index, label)')
-    .eq('id', batch.template_id)
-    .single();
+  const flaggedRows = (flaggedRes.data ?? []) as FlaggedPdfRow[];
+  const template = templateRes.data;
 
   const templateFields = (
     (template?.template_fields ?? []) as Pick<TemplateFieldRow, 'field_index' | 'label'>[]
@@ -92,16 +98,22 @@ async function CompletedView({ batchId, batch }: { batchId: string; batch: Batch
     .sort((a, b) => a.field_index - b.field_index)
     .map((f) => ({ index: f.field_index, label: f.label }));
 
-  // Sign each flagged PDF for inline preview.
-  const flagged = await Promise.all(
-    flaggedRows.map(async (r) => ({
-      row_index: r.row_index,
-      csv_data: r.csv_data,
-      flags: r.flags,
-      edited: r.edited,
-      pdf_url: r.pdf_storage_path ? await signedUrl('batches', r.pdf_storage_path, 60 * 60) : null,
-    })),
-  );
+  // Collect all non-null storage paths to sign in a single batch call
+  const pathsToSign = flaggedRows
+    .map((r) => r.pdf_storage_path)
+    .filter((p): p is string => !!p);
+
+  const signedUrlsMap = pathsToSign.length > 0 
+    ? await signedUrls('batches', pathsToSign, 60 * 60)
+    : {};
+
+  const flagged = flaggedRows.map((r) => ({
+    row_index: r.row_index,
+    csv_data: r.csv_data,
+    flags: r.flags,
+    edited: r.edited,
+    pdf_url: r.pdf_storage_path ? signedUrlsMap[r.pdf_storage_path] || null : null,
+  }));
 
   return (
     <ReviewClient

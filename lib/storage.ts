@@ -38,3 +38,31 @@ export async function uploadBytes(
     .upload(path, Buffer.from(bytes), { contentType, upsert: true });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
 }
+
+export async function signedUrls(
+  bucket: string,
+  paths: string[],
+  expiresInSeconds = 60 * 60,
+): Promise<Record<string, string>> {
+  if (paths.length === 0) return {};
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(bucket)
+    .createSignedUrls(paths, expiresInSeconds);
+  if (error || !data) return {};
+  
+  const mapping: Record<string, string> = {};
+  data.forEach((item) => {
+    if (item.signedUrl) {
+      // In some versions of Supabase storage, item.path or the input path is returned
+      mapping[item.path || ''] = item.signedUrl;
+      // Also map via full path suffix match just in case of formatting mismatch
+      const match = paths.find(p => p === item.path || p.endsWith(item.path || ''));
+      if (match) {
+        mapping[match] = item.signedUrl;
+      }
+    }
+  });
+  return mapping;
+}
+
