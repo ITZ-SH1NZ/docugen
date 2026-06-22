@@ -39,6 +39,20 @@ export default async function GeneratePage({
     })
   );
 
+  // Fetch custom fonts
+  let customFonts: { id: string; name: string }[] = [];
+  try {
+    const { data: assets } = await supabase
+      .from('assets')
+      .select('id, name')
+      .eq('type', 'font');
+    if (assets) {
+      customFonts = assets;
+    }
+  } catch (e) {
+    // Ignore
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,7 +62,7 @@ export default async function GeneratePage({
         </p>
       </div>
       
-      <GenerateClient templates={templates} preselect={preselect} />
+      <GenerateClient templates={templates} preselect={preselect} customFonts={customFonts} />
     </div>
   );
 }

@@ -31,11 +31,32 @@ interface TemplateOpt {
 export default function GenerateClient({
   templates,
   preselect,
+  customFonts = [],
 }: {
   templates: TemplateOpt[];
   preselect?: string;
+  customFonts?: Array<{ id: string; name: string }>;
 }) {
   const router = useRouter();
+
+  // Register custom fonts dynamically in the browser's document.fonts registry
+  useEffect(() => {
+    customFonts.forEach(font => {
+      const familyName = font.name.replace(/\.[^/.]+$/, ""); // Strip file extension
+      const url = `/api/assets/${font.id}`;
+      
+      const fontFace1 = new FontFace(font.name, `url(${url})`);
+      const fontFace2 = new FontFace(familyName, `url(${url})`);
+      
+      fontFace1.load().then(loadedFace => {
+        document.fonts.add(loadedFace);
+      }).catch(e => console.warn(`Failed loading font ${font.name}:`, e));
+      
+      fontFace2.load().then(loadedFace => {
+        document.fonts.add(loadedFace);
+      }).catch(e => console.warn(`Failed loading font ${familyName}:`, e));
+    });
+  }, [customFonts]);
   
   // Wizard steps: 1: Template, 2: Import Data, 3: Map Fields, 4: Preview
   const [step, setStep] = useState(1);
@@ -552,6 +573,9 @@ export default function GenerateClient({
                       else if (f.font_family === 'Roboto') fontFamily = 'var(--font-roboto)';
                       else if (f.font_family === 'Montserrat') fontFamily = 'var(--font-montserrat)';
                       else if (f.font_family === 'Lora') fontFamily = 'var(--font-lora)';
+                      else {
+                        fontFamily = `"${f.font_family.replace(/\.[^/.]+$/, '')}", "${f.font_family}"`;
+                      }
                       
                       // Scale font size
                       const fontSize = f.max_font_size * previewDims.scale;

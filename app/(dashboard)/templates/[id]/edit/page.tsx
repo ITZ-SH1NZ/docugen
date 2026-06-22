@@ -27,14 +27,14 @@ export default async function EditTemplatePage({
   if (!url) notFound();
 
   // Fetch custom fonts uploaded by user
-  let customFonts: string[] = [];
+  let customFonts: { id: string; name: string }[] = [];
   try {
     const { data: assets } = await supabase
       .from('assets')
-      .select('name')
+      .select('id, name')
       .eq('type', 'font');
     if (assets) {
-      customFonts = assets.map((a) => a.name);
+      customFonts = assets;
     }
   } catch (e) {
     // Graceful fallback if table does not exist

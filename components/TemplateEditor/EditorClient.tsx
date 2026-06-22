@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -69,7 +69,7 @@ interface Props {
   pageWidth: number;
   pageHeight: number;
   initialFields: TemplateField[];
-  customFonts?: string[];
+  customFonts?: Array<{ id: string; name: string }>;
 }
 
 export default function EditorClient({
@@ -82,7 +82,28 @@ export default function EditorClient({
   customFonts = [],
 }: Props) {
   const router = useRouter();
-  const fontOptions = [...FONTS, ...customFonts];
+  const fontOptions = [...FONTS, ...customFonts.map(cf => cf.name)];
+  
+  // Register custom fonts dynamically in the browser's document.fonts registry
+  useEffect(() => {
+    customFonts.forEach(font => {
+      const familyName = font.name.replace(/\.[^/.]+$/, ""); // Strip file extension
+      const url = `/api/assets/${font.id}`;
+      
+      // Attempt to load using standard and stripped family name to ensure CSS maps correctly
+      const fontFace1 = new FontFace(font.name, `url(${url})`);
+      const fontFace2 = new FontFace(familyName, `url(${url})`);
+      
+      fontFace1.load().then(loadedFace => {
+        document.fonts.add(loadedFace);
+      }).catch(e => console.warn(`Failed loading font ${font.name}:`, e));
+      
+      fontFace2.load().then(loadedFace => {
+        document.fonts.add(loadedFace);
+      }).catch(e => console.warn(`Failed loading font ${familyName}:`, e));
+    });
+  }, [customFonts]);
+
   const [fields, setFields] = useState<TemplateField[]>(initialFields);
   const [selectedId, setSelectedId] = useState<string | null>(initialFields[0]?.id ?? null);
   const [saving, setSaving] = useState(false);
