@@ -1,0 +1,58 @@
+{
+  "template_id": "cert_2026",
+  "pdf_path": "certificate_template.pdf",
+  "fields": [
+    {
+      "index": 0,
+      "label": "Participant Name",
+      "x": 121,
+      "y": 205,
+      "width": 600,
+      "height": 50,
+      "max_font_size": 30,
+      "min_font_size": 10,
+      "font_family": "Times",
+      "alignment": "center",
+      "color": [40, 30, 12]
+    },
+    {
+      "index": 1,
+      "label": "Course",
+      "x": 171,
+      "y": 322,
+      "width": 500,
+      "height": 36,
+      "max_font_size": 22,
+      "min_font_size": 10,
+      "font_family": "Times",
+      "alignment": "center",
+      "color": [40, 30, 12]
+    },
+    {
+      "index": 2,
+      "label": "Date",
+      "x": 120,
+      "y": 470,
+      "width": 220,
+      "height": 28,
+      "max_font_size": 14,
+      "min_font_size": 9,
+      "font_family": "Times",
+      "alignment": "center",
+      "color": [40, 30, 12]
+    },
+    {
+      "index": 3,
+      "label": "Certificate ID",
+      "x": 522,
+      "y": 470,
+      "width": 200,
+      "height": 28,
+      "max_font_size": 14,
+      "min_font_size": 9,
+      "font_family": "Courier",
+      "alignment": "center",
+      "color": [40, 30, 12]
+    }
+  ]
+}

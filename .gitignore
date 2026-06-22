@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+output/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# local env
+.env
+.env.local
+.env*.local
+
+# engine sample artifact
+test/certificate_template.pdf
+
+.DS_Store
