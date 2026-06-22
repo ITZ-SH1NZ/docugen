@@ -152,7 +152,7 @@ export default function BatchesListClient({
                           <Eye className="w-4 h-4" />
                           <span>View</span>
                         </Link>
-                        {b.status === 'completed' && b.output_zip_path && (
+                        {b.status === 'completed' && (
                           <a
                             href={`/api/batch/${b.id}/download`}
                             className="p-1.5 hover:bg-primary-soft text-text-secondary hover:text-primary rounded-md transition-all flex items-center gap-1.5 text-xs font-semibold"

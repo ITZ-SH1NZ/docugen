@@ -71,35 +71,16 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
     const flaggedIdx = new Set(metadata.flagged_rows.map((r) => r.row_index));
     const pdfPath = (i: number) => `${userId}/${batchId}/pdfs/row_${i}.pdf`;
 
-    // Bundle every PDF into the results zip — in memory, no network.
-    const zip = new JSZip();
-    for (const f of files) zip.file(f.name, f.bytes);
-    zip.file('batch_metadata.json', JSON.stringify(metadata, null, 2));
-    const zipBuf = await zip.generateAsync({
-      type: 'nodebuffer',
-      compression: 'DEFLATE',
-      compressionOptions: {
-        level: 9,
-      },
-    });
-
-    const zipPath = `${userId}/${batchId}/results.zip`;
     const metaPath = `${userId}/${batchId}/metadata.json`;
 
-    // Upload ONLY what the UI needs: the zip, metadata, and the flagged PDFs
-    // (for inline review). Clean PDFs live in the zip, so we don't make hundreds
-    // of round-trips. The zip + metadata are essential (await + may throw); the
-    // flagged-PDF previews are best-effort so one flaky upload can't fail an
-    // otherwise-complete batch.
-    await Promise.all([
-      uploadBytes('batches', zipPath, zipBuf, 'application/zip'),
-      uploadBytes(
-        'batches',
-        metaPath,
-        new TextEncoder().encode(JSON.stringify(metadata)),
-        'application/json',
-      ),
-    ]);
+    // Upload ONLY what the UI needs: the metadata and the flagged PDFs
+    // (for inline review). Clean PDFs live in the zip which is generated on the fly on download.
+    await uploadBytes(
+      'batches',
+      metaPath,
+      new TextEncoder().encode(JSON.stringify(metadata)),
+      'application/json',
+    );
 
     const flaggedUploads = files
       .filter((f) => flaggedIdx.has(Number(/row_(\d+)\.pdf/.exec(f.name)?.[1])))
@@ -155,13 +136,13 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
         generated_count: metadata.generated_count,
         flagged_count: metadata.flagged_count,
         metadata_storage_path: metaPath,
-        output_zip_path: zipPath,
+        output_zip_path: 'dynamic',
         completed_at: new Date().toISOString(),
         generation_time_ms: elapsed,
         avg_time_per_pdf_ms: metadata.generated_count
           ? Math.round(elapsed / metadata.generated_count)
           : 0,
-        output_size_mb: Number((zipBuf.length / (1024 * 1024)).toFixed(3)),
+        output_size_mb: 0.0,
       })
       .eq('id', batchId);
   } catch (err) {
