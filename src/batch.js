@@ -26,10 +26,10 @@ async function preloadCustomFonts(fields) {
 // Pure, in-memory batch generation — no filesystem. Used by both the CLI
 // (which wraps it with file I/O) and the web API route (which feeds it
 // uploaded bytes directly). Returns { metadata, files: [{ name, bytes }] }.
-export async function buildBatch({ template, templateBytes, csvText, batchId, onProgress }) {
+export async function buildBatch({ template, templateBytes, csvText, batchId, onProgress, preloadedFonts }) {
   const normalized = normalizeTemplate(template);
   const rows = parseCsv(csvText);
-  const customFonts = await preloadCustomFonts(normalized.fields);
+  const customFonts = preloadedFonts || await preloadCustomFonts(normalized.fields);
 
   const files = [];
   const allRows = [];

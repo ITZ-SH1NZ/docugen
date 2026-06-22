@@ -69,6 +69,7 @@ interface Props {
   pageWidth: number;
   pageHeight: number;
   initialFields: TemplateField[];
+  customFonts?: string[];
 }
 
 export default function EditorClient({
@@ -78,8 +79,10 @@ export default function EditorClient({
   pageWidth,
   pageHeight,
   initialFields,
+  customFonts = [],
 }: Props) {
   const router = useRouter();
+  const fontOptions = [...FONTS, ...customFonts];
   const [fields, setFields] = useState<TemplateField[]>(initialFields);
   const [selectedId, setSelectedId] = useState<string | null>(initialFields[0]?.id ?? null);
   const [saving, setSaving] = useState(false);
@@ -405,7 +408,7 @@ export default function EditorClient({
                           onChange={(e) => updateField(selected.id, { font_family: e.target.value })}
                           className="w-full bg-white border border-border px-3 py-1.5 text-sm rounded-btn outline-none focus:border-primary font-sans"
                         >
-                          {FONTS.map((font) => (
+                          {fontOptions.map((font) => (
                             <option key={font} value={font}>
                               {font}
                             </option>

@@ -3,16 +3,54 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { downloadBytes, uploadBytes } from '@/lib/storage';
 import { toEngineTemplate } from '@/lib/engineAdapter';
 import { buildBatch } from '@/src/batch.js';
+import { loadCustomFontBytes, fontKey } from '@/src/fonts.js';
 import type { TemplateFieldRow } from '@/lib/types';
 
-// Generates a batch in-process (no external queue). Invoked fire-and-forget via
-// `after()` from the generate route, so the HTTP response returns immediately
-// while this runs to completion on the (long-lived) Node server. All progress is
-// written to the batches row, which the SSE endpoint polls.
-//
-// This assumes a persistent Node process (`next start` on a VM / Railway / Render),
-// not a short-lived serverless function. For durability across restarts or true
-// background scaling, swap this for a pg-boss queue on the same Supabase Postgres.
+// Fetch custom font assets uploaded by user and map standard fonts
+async function loadBatchFonts(adminClient: any, userId: string, fields: any[]) {
+  let fontAssets: any[] = [];
+  try {
+    const { data } = await adminClient
+      .from('assets')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', 'font');
+    if (data) fontAssets = data;
+  } catch (e) {
+    // Ignore if table does not exist
+  }
+
+  const wanted = new Map();
+  for (const f of fields) {
+    const key = fontKey(f.font_family, f.font_weight);
+    if (!wanted.has(key)) wanted.set(key, { family: f.font_family, weight: f.font_weight });
+  }
+
+  const out = new Map();
+  await Promise.all(
+    [...wanted.entries()].map(async ([key, { family, weight }]) => {
+      let bytes: Uint8Array | null = await loadCustomFontBytes(family, weight);
+
+      if (!bytes && fontAssets.length > 0) {
+        const asset = fontAssets.find((a) =>
+          a.name.toLowerCase() === family.toLowerCase() ||
+          a.name.toLowerCase().replace(/\.[a-z0-9]+$/i, '') === family.toLowerCase()
+        );
+        if (asset) {
+          try {
+            bytes = await downloadBytes('assets', asset.storage_path);
+          } catch (e) {
+            console.warn(`[loadBatchFonts] Failed custom font ${asset.name}:`, e);
+          }
+        }
+      }
+
+      if (bytes) out.set(key, bytes);
+    })
+  );
+  return out;
+}
+
 export async function processBatch(batchId: string, userId: string): Promise<void> {
   const admin = createAdminClient();
   const started = Date.now();
@@ -43,6 +81,8 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
       template.template_fields as TemplateFieldRow[],
     );
 
+    const preloadedFonts = await loadBatchFonts(admin, userId, engineTemplate.fields);
+
     // Render all rows in memory (fast). Progress writes are fire-and-forget so
     // the render loop never blocks on the database; we await them before the
     // final "completed" write so a late one can't overwrite it.
@@ -53,6 +93,7 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
       templateBytes,
       csvText,
       batchId,
+      preloadedFonts,
       onProgress: ({ generated, total, flagged }) => {
         const pct = total ? Math.round((generated / total) * 100) : 100;
         if (pct !== lastPct && pct < 100) {

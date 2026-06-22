@@ -31,7 +31,14 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         router.push(params.get('redirect') || '/templates');
         router.refresh();
       } else {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectTo,
+          },
+        });
         if (error) throw error;
         if (data.session) {
           router.push('/templates');

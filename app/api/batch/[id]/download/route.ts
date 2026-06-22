@@ -6,6 +6,8 @@ import { buildBatch } from '@/src/batch.js';
 import JSZip from 'jszip';
 import type { BatchRecord, TemplateRecord, TemplateFieldRow } from '@/lib/types';
 
+import { loadCustomFontBytes, fontKey } from '@/src/fonts.js';
+
 export const runtime = 'nodejs';
 
 // GET /api/batch/:id/download — generate the results ZIP in-memory on-the-fly
@@ -57,12 +59,54 @@ export async function GET(
     const csvText = new TextDecoder().decode(csvBytes);
     const engineTemplate = toEngineTemplate(template.id, template.template_fields);
 
+    // Fetch custom fonts uploaded by user
+    let fontAssets: any[] = [];
+    try {
+      const { data } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('type', 'font');
+      if (data) fontAssets = data;
+    } catch (e) {
+      // Ignore if table does not exist
+    }
+
+    const wanted = new Map();
+    for (const f of engineTemplate.fields) {
+      const key = fontKey(f.font_family, f.font_weight);
+      if (!wanted.has(key)) wanted.set(key, { family: f.font_family, weight: f.font_weight });
+    }
+    const preloadedFonts = new Map();
+    await Promise.all(
+      [...wanted.entries()].map(async ([key, { family, weight }]) => {
+        let bytes: Uint8Array | null = await loadCustomFontBytes(family, weight);
+
+        if (!bytes && fontAssets.length > 0) {
+          const asset = fontAssets.find((a) =>
+            a.name.toLowerCase() === family.toLowerCase() ||
+            a.name.toLowerCase().replace(/\.[a-z0-9]+$/i, '') === family.toLowerCase()
+          );
+          if (asset) {
+            try {
+              bytes = await downloadBytes('assets', asset.storage_path);
+            } catch (e) {
+              console.warn(`Failed to download custom font asset ${asset.name}:`, e);
+            }
+          }
+        }
+
+        if (bytes) preloadedFonts.set(key, bytes);
+      }),
+    );
+
     // 4. Generate PDFs in-memory
     const { metadata, files } = await buildBatch({
       template: engineTemplate,
       templateBytes,
       csvText,
       batchId: id,
+      preloadedFonts,
     });
 
     // 5. Pack ZIP with compression

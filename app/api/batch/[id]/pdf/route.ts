@@ -72,6 +72,18 @@ export async function GET(
     const embeddedPage = await outDoc.embedPage(srcPage);
 
     // Preload custom fonts
+    let fontAssets: any[] = [];
+    try {
+      const { data } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('type', 'font');
+      if (data) fontAssets = data;
+    } catch (e) {
+      // Ignore if table does not exist
+    }
+
     const wanted = new Map();
     for (const f of engineTemplate.fields) {
       const key = fontKey(f.font_family, f.font_weight);
@@ -80,7 +92,22 @@ export async function GET(
     const customFonts = new Map();
     await Promise.all(
       [...wanted.entries()].map(async ([key, { family, weight }]) => {
-        const bytes = await loadCustomFontBytes(family, weight);
+        let bytes: Uint8Array | null = await loadCustomFontBytes(family, weight);
+
+        if (!bytes && fontAssets.length > 0) {
+          const asset = fontAssets.find((a) =>
+            a.name.toLowerCase() === family.toLowerCase() ||
+            a.name.toLowerCase().replace(/\.[a-z0-9]+$/i, '') === family.toLowerCase()
+          );
+          if (asset) {
+            try {
+              bytes = await downloadBytes('assets', asset.storage_path);
+            } catch (e) {
+              console.warn(`Failed to download custom font asset ${asset.name}:`, e);
+            }
+          }
+        }
+
         if (bytes) customFonts.set(key, bytes);
       }),
     );

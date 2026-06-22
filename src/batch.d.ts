@@ -43,6 +43,7 @@ export function buildBatch(args: {
   csvText: string;
   batchId: string;
   onProgress?: (p: ProgressInfo) => void | Promise<void>;
+  preloadedFonts?: Map<string, Uint8Array>;
 }): Promise<{ metadata: EngineMetadata; files: BatchFile[] }>;
 
 export function runBatch(args: {

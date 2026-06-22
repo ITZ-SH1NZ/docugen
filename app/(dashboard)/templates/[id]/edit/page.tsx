@@ -26,6 +26,20 @@ export default async function EditTemplatePage({
   const url = await signedUrl('templates', template.pdf_storage_path, 60 * 60);
   if (!url) notFound();
 
+  // Fetch custom fonts uploaded by user
+  let customFonts: string[] = [];
+  try {
+    const { data: assets } = await supabase
+      .from('assets')
+      .select('name')
+      .eq('type', 'font');
+    if (assets) {
+      customFonts = assets.map((a) => a.name);
+    }
+  } catch (e) {
+    // Graceful fallback if table does not exist
+  }
+
   // Map persisted rows to the editor's field shape (client id = db id).
   const fields: TemplateField[] = (template.template_fields ?? [])
     .sort((a, b) => a.field_index - b.field_index)
@@ -56,6 +70,7 @@ export default async function EditTemplatePage({
       pageWidth={template.page_width ?? 595}
       pageHeight={template.page_height ?? 842}
       initialFields={fields}
+      customFonts={customFonts}
     />
   );
 }
