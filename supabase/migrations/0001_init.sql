@@ -144,10 +144,11 @@ create policy batch_pdfs_owner on public.batch_pdfs
 -- server-side, so no storage policies are required for clients.
 -- ─────────────────────────────────────────────────────────────
 
-insert into storage.buckets (id, name, public)
-values ('templates', 'templates', false)
-on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('templates', 'templates', false, 524288000)
+on conflict (id) do update set file_size_limit = 524288000;
 
-insert into storage.buckets (id, name, public)
-values ('batches', 'batches', false)
-on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('batches', 'batches', false, 524288000)
+on conflict (id) do update set file_size_limit = 524288000;
+

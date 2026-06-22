@@ -75,7 +75,13 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
     const zip = new JSZip();
     for (const f of files) zip.file(f.name, f.bytes);
     zip.file('batch_metadata.json', JSON.stringify(metadata, null, 2));
-    const zipBuf = await zip.generateAsync({ type: 'nodebuffer' });
+    const zipBuf = await zip.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: 9,
+      },
+    });
 
     const zipPath = `${userId}/${batchId}/results.zip`;
     const metaPath = `${userId}/${batchId}/metadata.json`;
