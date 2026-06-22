@@ -47,7 +47,7 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
     // the render loop never blocks on the database; we await them before the
     // final "completed" write so a late one can't overwrite it.
     let lastPct = -1;
-    const progressWrites: Promise<unknown>[] = [];
+    const progressWrites: PromiseLike<unknown>[] = [];
     const { metadata, files } = await buildBatch({
       template: engineTemplate,
       templateBytes,
@@ -82,24 +82,32 @@ export async function processBatch(batchId: string, userId: string): Promise<voi
 
     // Upload ONLY what the UI needs: the zip, metadata, and the flagged PDFs
     // (for inline review). Clean PDFs live in the zip, so we don't make hundreds
-    // of round-trips. Uploads run with bounded concurrency → seconds, not minutes.
-    const uploads: Array<() => Promise<void>> = [
-      () => uploadBytes('batches', zipPath, zipBuf, 'application/zip'),
-      () =>
-        uploadBytes(
-          'batches',
-          metaPath,
-          new TextEncoder().encode(JSON.stringify(metadata)),
-          'application/json',
-        ),
-    ];
-    for (const f of files) {
-      const idx = Number(/row_(\d+)\.pdf/.exec(f.name)?.[1]);
-      if (flaggedIdx.has(idx)) {
-        uploads.push(() => uploadBytes('batches', pdfPath(idx), f.bytes, 'application/pdf'));
-      }
-    }
-    await runWithConcurrency(uploads, 8);
+    // of round-trips. The zip + metadata are essential (await + may throw); the
+    // flagged-PDF previews are best-effort so one flaky upload can't fail an
+    // otherwise-complete batch.
+    await Promise.all([
+      uploadBytes('batches', zipPath, zipBuf, 'application/zip'),
+      uploadBytes(
+        'batches',
+        metaPath,
+        new TextEncoder().encode(JSON.stringify(metadata)),
+        'application/json',
+      ),
+    ]);
+
+    const flaggedUploads = files
+      .filter((f) => flaggedIdx.has(Number(/row_(\d+)\.pdf/.exec(f.name)?.[1])))
+      .map((f) => {
+        const idx = Number(/row_(\d+)\.pdf/.exec(f.name)?.[1]);
+        return async () => {
+          try {
+            await uploadBytes('batches', pdfPath(idx), f.bytes, 'application/pdf');
+          } catch (e) {
+            console.warn(`[processBatch] flagged preview upload failed for row ${idx}:`, e);
+          }
+        };
+      });
+    await runWithConcurrency(flaggedUploads, 8);
 
     // Persist row records (chunked). pdf_storage_path is set only for flagged
     // rows (the ones actually uploaded); clean rows download via the zip.
