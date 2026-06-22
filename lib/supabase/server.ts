@@ -1,10 +1,12 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 // Server-side Supabase client bound to the request cookies. RLS is enforced
 // because it acts as the signed-in user. Use in Server Components and route
 // handlers. (Next 15: cookies() is async.)
-export async function createClient() {
+// Cached per-request to avoid duplicate initializations.
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -28,13 +30,13 @@ export async function createClient() {
       },
     },
   );
-}
+});
 
-// Returns the signed-in user or null.
-export async function getUser() {
+// Returns the signed-in user or null. Cached per-request to prevent duplicate auth fetches.
+export const getUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});

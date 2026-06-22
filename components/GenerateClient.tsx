@@ -546,7 +546,12 @@ export default function GenerateClient({
                       const height = f.height * previewDims.scale;
                       
                       // Font variables map
-                      const fontFamily = f.font_family === 'Playfair Display' ? 'var(--font-serif)' : f.font_family;
+                      let fontFamily = f.font_family;
+                      if (f.font_family === 'Playfair Display') fontFamily = 'var(--font-serif)';
+                      else if (f.font_family === 'Inter') fontFamily = 'var(--font-inter)';
+                      else if (f.font_family === 'Roboto') fontFamily = 'var(--font-roboto)';
+                      else if (f.font_family === 'Montserrat') fontFamily = 'var(--font-montserrat)';
+                      else if (f.font_family === 'Lora') fontFamily = 'var(--font-lora)';
                       
                       // Scale font size
                       const fontSize = f.max_font_size * previewDims.scale;

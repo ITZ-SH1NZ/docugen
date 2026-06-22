@@ -45,7 +45,7 @@ function makeField(index: number, pageWidth: number, pageHeight: number): Templa
   };
 }
 
-const FONTS = ['Arial', 'Times', 'Courier', 'Playfair Display'];
+const FONTS = ['Arial', 'Times', 'Courier', 'Playfair Display', 'Inter', 'Roboto', 'Montserrat', 'Lora'];
 const ALIGN: Alignment[] = ['left', 'center', 'right'];
 const TRANSFORMS: TextTransform[] = ['none', 'uppercase', 'lowercase', 'title_case'];
 
